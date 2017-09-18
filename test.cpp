@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <ctime>
 #include <tchar.h>
-//#define SIGNALS_ENABLE_REF_BIND 1
+//#define TEST_CLONE_BIND 1
 #include "signal.hpp"
 Signal<void(int)> g_sig;
 
@@ -145,7 +145,7 @@ void todo(bool test_warning = true)
 				ctest b, c;
 				g_sig.connect(&ctest::f3_p, &a, std::placeholders::_1, &b); ++normal_count;
 				g_sig.connect(&ctest::f3_r, &a, std::placeholders::_1, std::ref(b)); ++normal_count;
-#if SIGNALS_ENABLE_REF_BIND
+#if TEST_CLONE_BIND
 				if (test_warning) {
 					g_sig.connect(&ctest::f3_r, &a, std::placeholders::_1, c); ++normal_count; 			// [WARNING] clone with [c]
 					warning_count += 1; // [be differ with the 'BOOST', that are += 0]
@@ -165,7 +165,7 @@ void todo(bool test_warning = true)
 		{
 			ctest a;
 			g_sig.connect(&ctest::f3_p, &a, std::placeholders::_1, &a); ++normal_count;
-#if SIGNALS_ENABLE_REF_BIND
+#if TEST_CLONE_BIND
 			if (test_warning) {
 				g_sig.connect(&ctest::f3_r, &a, std::placeholders::_1, a); ++normal_count; // [WARNING] double clone with [c]
 				warning_count += 2; // [be differ with the 'BOOST', that are += 0]
