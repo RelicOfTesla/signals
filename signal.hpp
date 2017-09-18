@@ -79,9 +79,10 @@ namespace detail
 	template<typename T>
 	struct remove_all_extend : std::remove_pointer < typename std::remove_reference< typename std::decay<T>::type >::type >
 	{};
-	template<typename T>
-	struct remove_all_extend< std::reference_wrapper<T> > : remove_all_extend < T >
-	{};
+	template<typename T> struct remove_all_extend <T*> : remove_all_extend<T>{};
+	template<typename T> struct remove_all_extend <T&> : remove_all_extend<T>{};
+	template<typename T> struct remove_all_extend< std::reference_wrapper<T> > : remove_all_extend < T >{};
+	template<typename T> struct remove_all_extend< std::shared_ptr<T> > : remove_all_extend < T >{};
 
 	template<typename T>
 	struct is_conv_trackable : std::is_convertible < typename std::add_pointer< typename remove_all_extend<T>::type  >::type, Trackable* >
@@ -123,6 +124,10 @@ namespace detail
 			static_assert(false, "invalid style, use std::ref() / std::shared_ptr / T* ");
 #endif
 			return &r;
+		};
+		template<typename T>
+		static typename detail::remove_all_extend<T>::type* get_pointer(std::shared_ptr<T>& r){
+			return r.get();
 		};
 		template<typename T>
 		static typename detail::remove_all_extend<T>::type* get_pointer(T* r){

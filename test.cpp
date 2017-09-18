@@ -69,18 +69,20 @@ void todo(bool test_warning = true)
 {
 	int normal_count = 0;
 	int warning_count = 0;
+	int cid;
 
 	auto clear_sigal_state = [&](){
 		g_call_count = 0;
 		warning_count = 0;
 		normal_count = 0;
+		cid = 0;
 		g_sig.disconnect_all();
 		printf("=======\n");
 	};
 
 	{
 		// test function class
-		g_sig.connect(&test1); ++normal_count; 
+		g_sig.connect(&test1); ++normal_count;
 		g_sig.connect(&test1, std::placeholders::_1); ++normal_count;
 		g_sig.connect(std::bind(&test1, std::placeholders::_1)); ++normal_count;
 		//g_sig.connect(&test0); // error
@@ -93,16 +95,26 @@ void todo(bool test_warning = true)
 	}
 
 	{
-		// test object weak lookup
+		// test pointer weak lookup
 		ctest* a = new ctest;
+		std::shared_ptr<ctest> b;
 		g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count;
 		g_sig.connect(&ctest::f2, a, std::placeholders::_1, cunk()); ++normal_count;
 		if (test_warning) {
 			g_sig.connect(std::bind(&ctest::f1, a, std::placeholders::_1)); ++normal_count; // [WARNING]lose weak
 			warning_count += 1;
+
+			b = std::make_shared<ctest>();
+			cid = g_sig.connect(&ctest::f1, b, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
+			warning_count += 1;
+
+			//g_sig.connect(std::bind(&ctest::f1, b, std::placeholders::_1)); ++normal_count; // [WARNING]MUST manual disconnect
+			//warning_count += 1; // same with the 'BOOST', 
+
 		}
 		g_sig(201);
 		delete a;
+		b.reset();
 		g_sig(202);
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
@@ -127,14 +139,14 @@ void todo(bool test_warning = true)
 				}
 #endif
 				g_sig(301);
-			}
+	}
 			g_sig(302);
-		}
+}
 		g_sig(303);
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
 
-		
+
 		{
 			ctest a;
 			g_sig.connect(&ctest::f3_p, &a, std::placeholders::_1, &a); ++normal_count;
@@ -164,8 +176,8 @@ void todo(bool test_warning = true)
 
 	{
 		// test lambda
+		if (test_warning)
 		{
-			int cid;
 			{
 				auto lam1 = [](int v){
 					printf("lambda=%d\n", v);
@@ -177,8 +189,9 @@ void todo(bool test_warning = true)
 			g_sig(502);
 			g_sig.disconnect(cid);
 			g_sig(503);
+			warning_count += 2;
 		}
-		assert(g_call_count == 2);
+		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
 	}
 }
