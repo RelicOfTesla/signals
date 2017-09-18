@@ -1,5 +1,7 @@
 #pragma once
 
+// https://github.com/RelicOfTesla/signals
+
 #include <functional>  
 #include <map>  
 #include <memory>
@@ -75,12 +77,16 @@ namespace detail
 	class slot_t
 	{
 	public:
+		slot_t() {}
+		slot_t(const slot_t& r) : m_slot_func(r.m_slot_func), m_lookup(r.m_lookup)
+		{}
+
 		template<typename F>
 		slot_t(F&& f) : m_slot_func(f)
 		{}
 
 		template<typename... Args>
-		void operator()(Args&&... a)
+		void operator()(Args&&... args)
 		{
 			if (!m_slot_func)
 			{
@@ -90,11 +96,11 @@ namespace detail
 			{
 				if (w.expired())
 				{
-					m_slot_func.swap(std::function<func_type>());
+					m_slot_func = func_type();
 					return;
 				}
 			}
-			m_slot_func(a...);
+			m_slot_func(args...);
 		}
 
 
@@ -104,8 +110,8 @@ namespace detail
 		{
 			m_lookup.push_back(obj->m_trackable_ptr);
 		}
-	private:
-		std::function<func_type> m_slot_func;
+	protected:
+		func_type m_slot_func;
 		std::vector< std::weak_ptr<void> > m_lookup;
 	};
 
@@ -120,25 +126,26 @@ namespace detail
 namespace std
 {
 	template<int N>
-	struct is_placeholder<detail::_slot_autgen_placeholder<N>>
+	struct is_placeholder< detail::_slot_autgen_placeholder<N> >
 		: integral_constant < int, N + 1 >
 	{
 	};
 };
 
 template <typename... Args>
-class ClassSignal : public detail::signal_t < detail::slot_t<void(Args...)> >
+class ClassSignal : public detail::signal_t < detail::slot_t< std::function<void(Args...)> > >
 {
 public:
+	typedef detail::slot_t< std::function<void(Args...)> > slot_type;
 
 	template<typename C>
 	int connect_member(void(C::*f)(Args...), C* obj)
 	{
 		static_assert(std::is_convertible<C*, Trackable*>::value, "Not convert to type Trackable");
 		auto fn = construct_mem_fn(f, obj, make_int_sequence < sizeof...(Args) > {});
-		auto slot = detail::slot_t<void(Args...)>(std::move(fn));
+		slot_type slot(std::move(fn));
 		slot.add_track(obj);
-		return connect(std::move(slot));
+		return this->connect(slot);
 	}
 private:
 	template<int... Ns>
@@ -167,4 +174,4 @@ class ClassSignal<R(Args...)> : public ClassSignal < Args... >
 {};
 
 
-template<typename... Args> struct Signal : ClassSignal < Args ... > {};
+template<typename... T> struct Signal : ClassSignal < T ... > {};
