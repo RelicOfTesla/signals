@@ -90,7 +90,7 @@ namespace detail
 	{};
 
 
-	template <typename func_type>
+	template <typename func_impl>
 	class slot_t
 	{
 	public:
@@ -113,7 +113,7 @@ namespace detail
 			{
 				if (w.expired())
 				{
-					m_slot_func = func_type();
+					m_slot_func = func_impl();
 					return;
 				}
 			}
@@ -122,6 +122,7 @@ namespace detail
 
 		template<typename T>
 		static typename detail::remove_all_extend<T>::type* get_pointer(T&& r){
+			static_assert(false, "invalid style, use std::ref() / std::shared_ptr  ");
 			return &r;
 		};
 		template<typename T>
@@ -142,7 +143,7 @@ namespace detail
 		}
 
 	protected:
-		func_type m_slot_func;
+		func_impl m_slot_func;
 		std::vector< std::weak_ptr<void> > m_lookup;
 	};
 
@@ -169,13 +170,43 @@ namespace detail
 	}
 
 	///
+	template <typename func_impl>
+	class slot_signal_t : public signal_t<func_impl>
+	{
+	public:
+		typedef slot_t<func_impl> slot_type;
+		typedef signal_t<func_impl> base_type;
+
+		template<typename F, typename... Args>
+		int connect(F&& f, Args&&... args)
+		{
+			slot_type slot(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+			detail::visit_add_track(slot, std::forward<Args>(args)...);
+			return base_type::connect(slot);
+		}
+		template<typename F>
+		int connect(F&& f)
+		{
+			return base_type::connect(std::forward<F>(f));
+		}
+	};
+}
+
+template <typename... ARGS>
+class WeakSignal : public detail::slot_signal_t < std::function<void(ARGS...)> >
+{};
+
+template <typename R, typename... ARGS>
+class WeakSignal<R(ARGS...)> : public WeakSignal < ARGS... >
+{};
+//////////////////////////////////////////////////////////////////////////
+namespace detail
+{
 	template<int>
 	struct _slot_autgen_placeholder
 	{
 	};
-
-};
-
+}
 namespace std
 {
 	template<int N>
@@ -186,25 +217,9 @@ namespace std
 };
 
 template <typename... ARGS>
-class ClassSignal : public detail::signal_t < detail::slot_t< std::function<void(ARGS...)> > >
+class MemberSignal : public WeakSignal<ARGS...>
 {
 public:
-	typedef detail::slot_t< std::function<void(ARGS...)> > slot_type;
-	typedef detail::signal_t<slot_type> base_type;
-
-	template<typename F, typename... Args>
-	int connect(F&& f, Args&&... args)
-	{
-		slot_type slot(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-		detail::visit_add_track(slot, std::forward<Args>(args)...);
-		return base_type::connect(slot);
-	}
-	template<typename F>
-	int connect(F&& f)
-	{
-		return base_type::connect(std::forward<F>(f));;
-	}
-
 	template<typename T>
 	int connect_member(void(T::*f)(ARGS...), T* obj)
 	{
@@ -213,9 +228,6 @@ public:
 		detail::visit_add_track(slot, obj);
 		return base_type::connect(slot);
 	}
-protected:
-
-
 private:
 	template<int... Ns>
 	struct int_sequence
@@ -238,8 +250,12 @@ private:
 };
 
 template <typename R, typename... ARGS>
-class ClassSignal<R(ARGS...)> : public ClassSignal < ARGS... >
+class MemberSignal<R(ARGS...)> : public MemberSignal< ARGS... >
 {};
+//////////////////////////////////////////////////////////////////////////
 
 
-template<typename... T> struct Signal : ClassSignal < T ... > {};
+
+//template<typename... T> struct Signal : FuncSignal < T ... > {};
+//template<typename... T> struct Signal : WeakSignal < T ... > {};
+template<typename... T> struct Signal : MemberSignal < T ... > {};
