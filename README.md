@@ -4,11 +4,13 @@ c++11 signals
 only 170 source line
 
 
-##thanks
+### thanks
 
 * [lsignal](https://github.com/cpp11nullptr/lsignal) 
+* [simmesimme](http://simmesimme.github.io/tutorials/2015/09/20/signal-slot) 
 
-##sample
+
+### sample
 
 ```cpp
 
