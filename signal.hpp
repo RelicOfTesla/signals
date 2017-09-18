@@ -13,15 +13,17 @@ namespace detail
 	class signal_t
 	{
 	public:
+		typedef int connect_id;
+	public:
 		signal_t() : current_id_(0) {}
 
 		template<typename T>
-		int connect(T&& slot)  {
-			slots_.insert(std::pair<int, slot_type>(++current_id_, std::forward<T>(slot)));
+		connect_id connect(T&& slot)  {
+			slots_.insert(std::pair<connect_id, slot_type>(++current_id_, std::forward<T>(slot)));
 			return current_id_;
 		}
 
-		void disconnect(int id) {
+		void disconnect(connect_id id) {
 			slots_.erase(id);
 		}
 
@@ -42,8 +44,8 @@ namespace detail
 		}
 
 	private:
-		mutable std::map< int, slot_type> slots_;
-		mutable int current_id_;
+		mutable std::map< connect_id, slot_type> slots_;
+		mutable connect_id current_id_;
 
 	private:
 		signal_t(const signal_t& other);
@@ -85,11 +87,6 @@ namespace detail
 	struct is_conv_trackable : std::is_convertible < typename std::add_pointer< typename remove_all_extend<T>::type  >::type, Trackable* >
 	{};
 
-	template<typename T>
-	struct enable_if_trackable : std::enable_if < is_conv_trackable<T>::value, void >
-	{};
-
-
 	template <typename func_impl>
 	class slot_t
 	{
@@ -121,8 +118,10 @@ namespace detail
 		}
 
 		template<typename T>
-		static typename detail::remove_all_extend<T>::type* get_pointer(T&& r){
-			static_assert(false, "invalid style, use std::ref() / std::shared_ptr  ");
+		static typename detail::remove_all_extend<T>::type* get_pointer(T& r){
+#if !SIGNALS_ENABLE_REF_BIND
+			static_assert(false, "invalid style, use std::ref() / std::shared_ptr / T* ");
+#endif
 			return &r;
 		};
 		template<typename T>
@@ -130,16 +129,16 @@ namespace detail
 			return r;
 		};
 		template<typename T>
-		static typename detail::remove_all_extend<T>::type* get_pointer(std::reference_wrapper<T>& r){
+		static typename detail::remove_all_extend<T>::type* get_pointer(std::reference_wrapper<T>&& r){
 			return &(r.get());
 		};
 
 		template<typename T
-			, class = typename enable_if_trackable<T>::type
+			, class = typename std::enable_if <is_conv_trackable<T>::value>::type
 		>
 		void add_track(T&& obj)
 		{
-			m_lookup.push_back(get_pointer(obj)->m_trackable_ptr);
+			m_lookup.push_back(get_pointer(std::forward<T>(obj))->m_trackable_ptr);
 		}
 
 	protected:
@@ -178,14 +177,14 @@ namespace detail
 		typedef signal_t<func_impl> base_type;
 
 		template<typename F, typename... Args>
-		int connect(F&& f, Args&&... args)
+		connect_id connect(F&& f, Args&&... args)
 		{
 			slot_type slot(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
 			detail::visit_add_track(slot, std::forward<Args>(args)...);
 			return base_type::connect(slot);
 		}
 		template<typename F>
-		int connect(F&& f)
+		connect_id connect(F&& f)
 		{
 			return base_type::connect(std::forward<F>(f));
 		}
@@ -221,7 +220,7 @@ class MemberSignal : public WeakSignal<ARGS...>
 {
 public:
 	template<typename T>
-	int connect_member(void(T::*f)(ARGS...), T* obj)
+	connect_id connect_member(void(T::*f)(ARGS...), T* obj)
 	{
 		static_assert(detail::is_conv_trackable<T>::value, "Not convert to type Trackable");
 		slot_type slot(gen_mem_fn(f, obj, make_int_sequence < sizeof...(ARGS) > {}));
@@ -254,7 +253,7 @@ class MemberSignal<R(ARGS...)> : public MemberSignal< ARGS... >
 {};
 //////////////////////////////////////////////////////////////////////////
 
-
+//namespace SignalDetail = detail;
 
 //template<typename... T> struct Signal : FuncSignal < T ... > {};
 //template<typename... T> struct Signal : WeakSignal < T ... > {};
