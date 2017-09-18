@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <ctime>
 #include <tchar.h>
-
+//#define SIGNALS_ENABLE_REF_BIND 1
 #include "signal.hpp"
 Signal<void(int)> g_sig;
 
@@ -97,29 +97,40 @@ void todo(bool test_warning = true)
 	{
 		// test pointer weak lookup
 		ctest* a = new ctest;
-		std::shared_ptr<ctest> b;
 		g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count;
 		g_sig.connect(&ctest::f2, a, std::placeholders::_1, cunk()); ++normal_count;
 		if (test_warning) {
 			g_sig.connect(std::bind(&ctest::f1, a, std::placeholders::_1)); ++normal_count; // [WARNING]lose weak
 			warning_count += 1;
+		}
+		g_sig(201);
+		delete a;
+		g_sig(202);
 
-			b = std::make_shared<ctest>();
+#if SIGNALS_ENABLE_REF_BIND
+		assert(g_call_count == normal_count + warning_count);
+		clear_sigal_state();
+
+		if (test_warning) {
+			auto b = std::make_shared<ctest>();
 			cid = g_sig.connect(&ctest::f1, b, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
 			warning_count += 1;
 
 			//g_sig.connect(std::bind(&ctest::f1, b, std::placeholders::_1)); ++normal_count; // [WARNING]MUST manual disconnect
 			//warning_count += 1; // same with the 'BOOST', 
-
+			
+			g_sig(203);
+			b.reset();
 		}
-		g_sig(201);
-		delete a;
-		b.reset();
-		g_sig(202);
+		g_sig(204);
+		if (cid)
+			g_sig.disconnect(cid);
+		g_sig(205);
+
+#endif
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
 	}
-
 
 	{
 
@@ -152,7 +163,7 @@ void todo(bool test_warning = true)
 			g_sig.connect(&ctest::f3_p, &a, std::placeholders::_1, &a); ++normal_count;
 #if SIGNALS_ENABLE_REF_BIND
 			if (test_warning) {
-				g_sig.connect(&ctest::f3_r, &a, placeholders::_1, a); ++normal_count; // [WARNING] double clone with [c]
+				g_sig.connect(&ctest::f3_r, &a, std::placeholders::_1, a); ++normal_count; // [WARNING] double clone with [c]
 				warning_count += 2; // [be differ with the 'BOOST', that are += 0]
 			}
 #endif
