@@ -3,9 +3,9 @@
 #include <cstdio>
 #include <ctime>
 #include <tchar.h>
-//#define SIGNALS_ENABLE_REF_BIND 1
 #include "signal.hpp"
 Signal<void(int)> g_sig;
+//#define SIGNALS_ENABLE_REF_BIND 1
 
 int g_call_count = 0;
 
@@ -95,7 +95,7 @@ void todo(bool test_warning = true)
 	}
 
 	{
-		// test pointer weak lookup
+		// test raw pointer weak lookup
 		ctest* a = new ctest;
 		g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count;
 		g_sig.connect(&ctest::f2, a, std::placeholders::_1, cunk()); ++normal_count;
@@ -106,28 +106,27 @@ void todo(bool test_warning = true)
 		g_sig(201);
 		delete a;
 		g_sig(202);
-
-#if SIGNALS_ENABLE_REF_BIND
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
+	}
 
+	{
+		// [WARNING] test smart pointer
 		if (test_warning) {
-			auto b = std::make_shared<ctest>();
-			cid = g_sig.connect(&ctest::f1, b, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
-			warning_count += 1;
+			auto a = std::make_shared<ctest>();
+			cid = g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
+			warning_count += 1; // same with the 'BOOST'. a was clone to slot container.
 
 			//g_sig.connect(std::bind(&ctest::f1, b, std::placeholders::_1)); ++normal_count; // [WARNING]MUST manual disconnect
-			//warning_count += 1; // same with the 'BOOST', 
+			//warning_count += 1; // same with the 'BOOST'. a was clone to slot container.
 			
 			g_sig(203);
-			b.reset();
+			a.reset();
+			g_sig(204);
+			if (cid)
+				g_sig.disconnect(cid);
+			g_sig(205);
 		}
-		g_sig(204);
-		if (cid)
-			g_sig.disconnect(cid);
-		g_sig(205);
-
-#endif
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
 	}
@@ -186,7 +185,7 @@ void todo(bool test_warning = true)
 	}
 
 	{
-		// test lambda
+		// [warning] test lambda
 		if (test_warning)
 		{
 			{

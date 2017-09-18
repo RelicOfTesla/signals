@@ -137,7 +137,7 @@ namespace detail
 
 		template<typename T> struct is_safe_track : std::is_pointer<T>{};
 		template<typename T> struct is_safe_track<T&> : is_safe_track<T>{};
-		template<typename T> struct is_safe_track< std::shared_ptr<T> > : is_safe_track<T>{};
+		template<typename T> struct is_safe_track< std::shared_ptr<T> > : is_safe_track<T*>{};
 		template<typename T> struct is_safe_track< std::reference_wrapper<T> > : is_safe_track<T*>{};
 
 		template<typename T
