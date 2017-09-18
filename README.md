@@ -18,8 +18,7 @@ Signal<void(int)> g_sig;
 
 struct ctest : Trackable
 {
-    void f1(int v)
-	{
+    void f1(int v) {
 		printf("f1=%d\n", v);
 	}
 
@@ -32,6 +31,10 @@ struct ctest : Trackable
 	}
 };
 
+void test1( int v )
+{
+	printf("test=%d\n", v);
+}
 void todo()
 {
 	g_sig.connect( &test1 );
