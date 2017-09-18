@@ -70,8 +70,9 @@ struct Trackable
 {
 	std::shared_ptr<void> m_trackable_ptr;
 
-	Trackable() : m_trackable_ptr(new int)
+	Trackable() : m_trackable_ptr((void*)&_Trackable_destory, _Trackable_destory)
 	{}
+	static void _Trackable_destory(void*){}
 };
 
 namespace detail
@@ -81,29 +82,24 @@ namespace detail
 	{};
 	template<typename T> struct remove_all_extend <T*> : remove_all_extend<T>{};
 	template<typename T> struct remove_all_extend <T&> : remove_all_extend<T>{};
-	template<typename T> struct remove_all_extend< std::reference_wrapper<T> > : remove_all_extend < T >{};
-	template<typename T> struct remove_all_extend< std::shared_ptr<T> > : remove_all_extend < T >{};
 
 	template<typename T>
-	static typename detail::remove_all_extend<T>::type* get_pointer(T& r){
+	static typename T* get_pointer(T& r){
 		return &r;
 	};
 	template<typename T>
-	static typename detail::remove_all_extend<T>::type* get_pointer(T* r){
+	static typename T* get_pointer(T* r){
 		return r;
 	};
 	template<typename T>
-	static typename detail::remove_all_extend<T>::type* get_pointer(std::shared_ptr<T>& r){
-		return r.get();
-	};
-	template<typename T>
-	static typename detail::remove_all_extend<T>::type* get_pointer(std::reference_wrapper<T>&& r){
+	static typename T* get_pointer(std::reference_wrapper<T>&& r){
 		return &(r.get());
 	};
 	//////////////////////////////////////////////////////////////////////////
 	template<typename T>
 	struct is_conv_trackable : std::is_convertible <typename remove_all_extend<T>::type*, Trackable* >
 	{};
+	template<typename T> struct is_conv_trackable< std::reference_wrapper<T> > : is_conv_trackable < T >{};
 
 	template <typename func_impl>
 	class slot_t
@@ -135,19 +131,12 @@ namespace detail
 			m_slot_func(args...);
 		}
 
-		template<typename T> struct is_safe_track : std::is_pointer<T>{};
-		template<typename T> struct is_safe_track<T&> : is_safe_track<T>{};
-		template<typename T> struct is_safe_track< std::shared_ptr<T> > : is_safe_track<T*>{};
-		template<typename T> struct is_safe_track< std::reference_wrapper<T> > : is_safe_track<T*>{};
 
 		template<typename T
 			, class = typename std::enable_if <is_conv_trackable<T>::value>::type
 		>
 		void add_track(T&& obj)
 		{
-#if !SIGNALS_ENABLE_REF_BIND
-			static_assert(is_safe_track<T>::value, "invalid style, use std::ref() / T* ");
-#endif
 			m_lookup.push_back(get_pointer(std::forward<T>(obj))->m_trackable_ptr);
 		}
 

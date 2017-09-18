@@ -3,13 +3,18 @@
 #include <cstdio>
 #include <ctime>
 #include <tchar.h>
+//#define SIGNALS_ENABLE_REF_BIND 1
 #include "signal.hpp"
 Signal<void(int)> g_sig;
-//#define SIGNALS_ENABLE_REF_BIND 1
 
 int g_call_count = 0;
 
-struct cunk{};
+struct cunk{
+	void f1(int v){
+		printf("%s=%d\n", __FUNCTION__, v);
+		++g_call_count;
+	}
+};
 struct ctest : Trackable
 {
 #if 0
@@ -24,7 +29,7 @@ struct ctest : Trackable
 	}
 #endif
 	void f1(int v){
-		printf("f1=%d\n", v);
+		printf("%s=%d\n", __FUNCTION__, v);
 		++g_call_count;
 	}
 	void f2(int v, const cunk&){
@@ -119,7 +124,7 @@ void todo(bool test_warning = true)
 
 			//g_sig.connect(std::bind(&ctest::f1, b, std::placeholders::_1)); ++normal_count; // [WARNING]MUST manual disconnect
 			//warning_count += 1; // same with the 'BOOST'. a was clone to slot container.
-			
+
 			g_sig(203);
 			a.reset();
 			g_sig(204);
@@ -149,9 +154,9 @@ void todo(bool test_warning = true)
 				}
 #endif
 				g_sig(301);
-	}
+			}
 			g_sig(302);
-}
+		}
 		g_sig(303);
 		assert(g_call_count == normal_count + warning_count);
 		clear_sigal_state();
