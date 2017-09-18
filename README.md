@@ -1,13 +1,13 @@
 c++11 signals
 ### Ligh Signal/slot/trackable
 
-only 170 source line
+only 246 source line
 
 
 ### thanks
 
 * [lsignal](https://github.com/cpp11nullptr/lsignal) 
-* [simmesimme](http://simmesimme.github.io/tutorials/2015/09/20/signal-slot) 
+ [simmesimme](http://simmesimme.github.io/tutorials/2015/09/20/signal-slot) 
 
 
 ### sample
@@ -44,9 +44,11 @@ void todo()
 		ctest b;
 		g_sig(222);
 	}
+	g_sig.connect(&ctest::f1, a, std::placeholder::_1);
 	g_sig(333);
 	delete a;
 	g_sig(444);
+	
 }
 
 ```
