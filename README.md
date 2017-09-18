@@ -1,13 +1,7 @@
 c++11 signals
-### Ligh Signal/slot/trackable
+### Lightweight Signal/slot/trackable
 
-only 246 source line
-
-
-### thanks
-
-* [lsignal](https://github.com/cpp11nullptr/lsignal) 
- [simmesimme](http://simmesimme.github.io/tutorials/2015/09/20/signal-slot) 
+only 63/201/261 source line, lightweight
 
 
 ### sample
@@ -52,3 +46,8 @@ void todo()
 }
 
 ```
+
+### thanks
+
+* [lsignal](https://github.com/cpp11nullptr/lsignal) 
+* [simmesimme](http://simmesimme.github.io/tutorials/2015/09/20/signal-slot) 
