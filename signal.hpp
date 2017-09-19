@@ -80,26 +80,26 @@ namespace detail
 	template<typename T>
 	struct remove_all_extend : std::remove_pointer < typename std::remove_reference< typename std::decay<T>::type >::type >
 	{};
-	template<typename T> struct remove_all_extend <T*> : remove_all_extend<T>{};
-	template<typename T> struct remove_all_extend <T&> : remove_all_extend<T>{};
+	template<typename T> struct remove_all_extend <T*> : remove_all_extend < T > {};
+	template<typename T> struct remove_all_extend <T&> : remove_all_extend < T > {};
 
 	template<typename T>
-	static typename T* get_pointer(T& r){
+	static T* get_pointer(T& r){
 		return &r;
 	};
 	template<typename T>
-	static typename T* get_pointer(T* r){
+	static T* get_pointer(T* r){
 		return r;
 	};
 	template<typename T>
-	static typename T* get_pointer(std::reference_wrapper<T>&& r){
+	static T* get_pointer(std::reference_wrapper<T>&& r){
 		return &(r.get());
 	};
 	//////////////////////////////////////////////////////////////////////////
 	template<typename T>
-	struct is_conv_trackable : std::is_convertible <typename remove_all_extend<T>::type*, Trackable* >
+	struct is_conv_trackable : std::is_convertible < typename remove_all_extend<T>::type*, Trackable* >
 	{};
-	template<typename T> struct is_conv_trackable< std::reference_wrapper<T> > : is_conv_trackable < T >{};
+	template<typename T> struct is_conv_trackable< std::reference_wrapper<T> > : is_conv_trackable < T > {};
 
 	template <typename func_impl>
 	class slot_t
@@ -169,11 +169,13 @@ namespace detail
 
 	///
 	template <typename func_impl>
-	class slot_signal_t : public signal_t<func_impl>
+	class slot_signal_t : public signal_t < func_impl >
 	{
-	public:
-		typedef slot_t<func_impl> slot_type;
+	private:
 		typedef signal_t<func_impl> base_type;
+	public:
+		typedef typename base_type::connect_id connect_id;
+		typedef slot_t<func_impl> slot_type;
 
 		template<typename F, typename... Args>
 		connect_id connect(F&& f, Args&&... args)
@@ -215,9 +217,14 @@ namespace std
 };
 
 template <typename... ARGS>
-class MemberSignal : public WeakSignal<ARGS...>
+class MemberSignal : public WeakSignal < ARGS... >
 {
+private:
+	typedef WeakSignal < ARGS... > base_type;
+	typedef typename base_type::slot_type slot_type;
 public:
+	typedef typename base_type::connect_id connect_id;
+
 	template<typename T>
 	connect_id connect_member(void(T::*f)(ARGS...), T* obj)
 	{
@@ -248,7 +255,7 @@ private:
 };
 
 template <typename R, typename... ARGS>
-class MemberSignal<R(ARGS...)> : public MemberSignal< ARGS... >
+class MemberSignal<R(ARGS...)> : public MemberSignal < ARGS... >
 {};
 //////////////////////////////////////////////////////////////////////////
 
