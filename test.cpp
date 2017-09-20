@@ -74,13 +74,13 @@ void todo(bool test_warning = true)
 {
 	int normal_count = 0;
 	int warning_count = 0;
-	int cid;
+	SignalConnect conn;
 
 	auto clear_sigal_state = [&](){
 		g_call_count = 0;
 		warning_count = 0;
 		normal_count = 0;
-		cid = 0;
+		conn.reset();
 		g_sig.disconnect_all();
 		printf("=======\n");
 	};
@@ -119,7 +119,7 @@ void todo(bool test_warning = true)
 		// [WARNING] test smart pointer
 		if (test_warning) {
 			auto a = std::make_shared<ctest>();
-			cid = g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
+			conn = g_sig.connect(&ctest::f1, a, std::placeholders::_1); ++normal_count; // [WARNING]MUST manual disconnect
 			warning_count += 1; // same with the 'BOOST'. a was clone to slot container.
 
 			//g_sig.connect(std::bind(&ctest::f1, b, std::placeholders::_1)); ++normal_count; // [WARNING]MUST manual disconnect
@@ -128,8 +128,8 @@ void todo(bool test_warning = true)
 			g_sig(203);
 			a.reset();
 			g_sig(204);
-			if (cid)
-				g_sig.disconnect(cid);
+			if (conn)
+				conn->disconnect();
 			g_sig(205);
 		}
 		assert(g_call_count == normal_count + warning_count);
@@ -198,11 +198,11 @@ void todo(bool test_warning = true)
 					printf("lambda=%d\n", v);
 					++g_call_count;
 				};
-				cid = g_sig.connect(lam1); // [MSG] MUST manual disconnect
+				conn = g_sig.connect(lam1); // [MSG] MUST manual disconnect
 				g_sig(501);
 			}
 			g_sig(502);
-			g_sig.disconnect(cid);
+			conn->disconnect();
 			g_sig(503);
 			warning_count += 2;
 		}

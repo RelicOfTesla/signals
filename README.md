@@ -1,7 +1,7 @@
 c++11 signals
 ### Lightweight Signal/slot/trackable
 
-only 66/200/260 source line, lightweight
+only 92/225/293 source line, lightweight
 
 
 ### sample
