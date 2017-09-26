@@ -119,7 +119,21 @@ void todo(bool test_warning = true)
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
 	}
-	
+	{
+		if (test_warning)
+		{
+			// [WARNING] call deleted pointer 
+			cunk* a1 = new cunk;
+			g_sig.connect(&cunk::f1, a1, std::placeholders::_1); ++normal_count;
+			WARNING_Ref += 1;
+
+			g_sig(301);
+			delete a1;
+			g_sig(302);
+			assert(g_call_count == normal_count + WARNING_Ref);
+			clear_sigal_state();
+		}
+	}
 
 	{
 		// test smart pointer
@@ -127,9 +141,9 @@ void todo(bool test_warning = true)
 		{
 			auto a1 = std::make_shared<ctest>();
 			g_sig.connect(&ctest::f1, a1.get(), std::placeholders::_1); ++normal_count;
-			g_sig(221);
+			g_sig(401);
 		}
-		g_sig(222);
+		g_sig(402);
 
 		if (test_warning) 
 		{
@@ -145,15 +159,15 @@ void todo(bool test_warning = true)
 				conn3 = g_sig.connect(std::bind(&ctest::f1, c1, std::placeholders::_1)); ++normal_count;
 				WARNING_Ref += 1; // same with the 'BOOST'. [c1] was wrap/clone in bind.
 
-				g_sig(223);
+				g_sig(403);
 			}
-			g_sig(224);
+			g_sig(404);
 
 			if (conn)
 				conn->disconnect();
 			if (conn3)
 				conn3->disconnect();
-			g_sig(225);
+			g_sig(405);
 		}
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
@@ -171,9 +185,9 @@ void todo(bool test_warning = true)
 				WARNING_Ref += 1;
 			}
 #endif
-			g_sig(203);
+			g_sig(501);
 		}
-		g_sig(204);
+		g_sig(502);
 
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
@@ -197,15 +211,16 @@ void todo(bool test_warning = true)
 					WARNING_Ref += 1;
 				}
 #endif
-				g_sig(301);
+				g_sig(601);
 			}
-			g_sig(302);
+			g_sig(602);
 		}
-		g_sig(303);
+		g_sig(603);
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
 
-
+	}
+	{
 		{
 			ctest a1;
 			g_sig.connect(&ctest::f3_p, &a1, std::placeholders::_1, &a1); ++normal_count;
@@ -216,9 +231,9 @@ void todo(bool test_warning = true)
 				WARNING_Ref += 2;
 			}
 #endif
-			g_sig(311);
+			g_sig(701);
 		}
-		g_sig(312);
+		g_sig(702);
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
 	}
@@ -227,9 +242,9 @@ void todo(bool test_warning = true)
 		// test object class scope bind
 		{
 			ctest_scope a;
-			g_sig(401);
+			g_sig(801);
 		}
-		g_sig(402);
+		g_sig(802);
 		assert(g_call_count == 1);
 		clear_sigal_state();
 	}
@@ -243,13 +258,15 @@ void todo(bool test_warning = true)
 					printf("lambda=%d\n", v);
 					++g_call_count;
 				};
-				conn = g_sig.connect(lam1); // [MSG] MUST manual disconnect
-				g_sig(501);
+				conn = g_sig.connect(lam1); ++normal_count;// [MSG] MUST manual disconnect
+				WARNING_Ref += 1;
+
+				g_sig(901);
 			}
-			g_sig(502);
-			conn->disconnect();
-			g_sig(503);
-			WARNING_Ref += 2;
+			g_sig(902);
+			if (conn)
+				conn->disconnect();
+			g_sig(903);
 		}
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
