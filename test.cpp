@@ -127,8 +127,8 @@ void todo(bool test_warning = true)
 
 			// [WARNING]MUST manual disconnect
 			auto b1 = std::make_shared<ctest>();
-			auto conn3 = g_sig.connect(std::bind(&ctest::f1, b1, std::placeholders::_1)); ++normal_count;
-			WARNING_Ref += 1; // same with the 'BOOST'. [c1] was clone wrap in slot container.
+			auto conn2 = g_sig.connect(std::bind(&ctest::f1, b1, std::placeholders::_1)); ++normal_count;
+			WARNING_Ref += 1; // same with the 'BOOST'. [b1] was clone wrap in slot container.
 
 			// [MSG] Right USE
 			auto c1 = std::make_shared<ctest>();
@@ -141,8 +141,8 @@ void todo(bool test_warning = true)
 			g_sig(204);
 			if (conn)
 				conn->disconnect();
-			if (conn3)
-				conn3->disconnect();
+			if (conn2)
+				conn2->disconnect();
 			g_sig(205);
 		}
 		assert(g_call_count == normal_count + WARNING_Ref);
