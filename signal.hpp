@@ -103,28 +103,33 @@ struct Trackable
 namespace SignalDetail
 {
 	template<typename T>
-	struct remove_all_extend : std::remove_pointer < typename std::remove_reference< typename std::decay<T>::type >::type >
-	{};
-	template<typename T> struct remove_all_extend <T*> : remove_all_extend < T > {};
-	template<typename T> struct remove_all_extend <T&> : remove_all_extend < T > {};
-
-	template<typename T>
 	static T* get_pointer(T& r){
+#if SIGNAL_OPEN_CLONE_BIND
 		return &r;
+#else
+		static_assert(false, "don't clone object");
+#endif
 	};
 	template<typename T>
 	static T* get_pointer(T* r){
 		return r;
 	};
 	template<typename T>
-	static T* get_pointer(std::reference_wrapper<T>&& r){
+	static T* get_pointer(std::reference_wrapper<T>& r){
 		return &(r.get());
 	};
+// 	template<typename T>
+// 	static T* get_pointer(const std::shared_ptr<T>& r){
+// 		return r.get();
+// 	};
 	//////////////////////////////////////////////////////////////////////////
 	template<typename T>
-	struct is_conv_trackable : std::is_convertible < typename remove_all_extend<T>::type*, Trackable* >
+	struct is_conv_trackable : std::is_convertible < typename std::decay<T>::type*, Trackable* >
 	{};
-	template<typename T> struct is_conv_trackable< std::reference_wrapper<T> > : is_conv_trackable < T > {};
+	template<typename T> struct is_conv_trackable <T*> : is_conv_trackable < T >{};
+	template<typename T> struct is_conv_trackable< T& > : is_conv_trackable < T >{};
+	template<typename T> struct is_conv_trackable< std::reference_wrapper<T> > : is_conv_trackable < T >{};
+//	template<typename T> struct is_conv_trackable< std::shared_ptr<T> > : is_conv_trackable < T >{};
 
 	template <typename func_impl>
 	class slot_t
@@ -162,7 +167,7 @@ namespace SignalDetail
 		>
 		void add_track(T&& obj)
 		{
-			m_lookup.push_back(get_pointer(std::forward<T>(obj))->m_trackable_ptr);
+			m_lookup.push_back(get_pointer(/*std::forward<T>*/(obj))->m_trackable_ptr);
 		}
 
 	protected:
