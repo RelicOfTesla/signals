@@ -3,9 +3,12 @@
 #include <cstdio>
 #include <ctime>
 #include <tchar.h>
+
 //#define TEST_CLONE_BIND 1
 //#define SIGNAL_OPEN_CLONE_BIND 1
+
 #include "signal.hpp"
+
 Signal<void(int)> g_sig;
 
 int g_call_count = 0;
@@ -116,42 +119,67 @@ void todo(bool test_warning = true)
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
 	}
+	
 
 	{
-		// [WARNING] test smart pointer
-		if (test_warning) {
+		// test smart pointer
+		// [MSG] Odd Style
+		{
 			auto a1 = std::make_shared<ctest>();
-			// [WARNING]MUST manual disconnect
-			conn = g_sig.connect(&ctest::f1, a1, std::placeholders::_1); ++normal_count;
-			WARNING_Ref += 1; // same with the 'BOOST'. [a1] was clone wrap in slot container.
+			g_sig.connect(&ctest::f1, a1.get(), std::placeholders::_1); ++normal_count;
+			g_sig(221);
+		}
+		g_sig(222);
 
-			// [WARNING]MUST manual disconnect
-			auto b1 = std::make_shared<ctest>();
-			auto conn2 = g_sig.connect(std::bind(&ctest::f1, b1, std::placeholders::_1)); ++normal_count;
-			WARNING_Ref += 1; // same with the 'BOOST'. [b1] was clone wrap in slot container.
+		if (test_warning) 
+		{
+			SignalConnect conn3;
+			{
+				// [WARNING]MUST manual disconnect
+				auto b1 = std::make_shared<ctest>();
+				conn = g_sig.connect(&ctest::f1, b1, std::placeholders::_1); ++normal_count;
+				WARNING_Ref += 1; // same with the 'BOOST'. [b1] was wrap/clone in slot container.
 
-			// [MSG] Right USE
-			auto c1 = std::make_shared<ctest>();
-			g_sig.connect(&ctest::f1, c1.get(), std::placeholders::_1); ++normal_count;
+				// [WARNING]MUST manual disconnect
+				auto c1 = std::make_shared<ctest>();
+				conn3 = g_sig.connect(std::bind(&ctest::f1, c1, std::placeholders::_1)); ++normal_count;
+				WARNING_Ref += 1; // same with the 'BOOST'. [c1] was wrap/clone in bind.
 
-			g_sig(203);
-			a1.reset();
-			b1.reset();
-			c1.reset();
-			g_sig(204);
+				g_sig(223);
+			}
+			g_sig(224);
+
 			if (conn)
 				conn->disconnect();
-			if (conn2)
-				conn2->disconnect();
-			g_sig(205);
+			if (conn3)
+				conn3->disconnect();
+			g_sig(225);
 		}
 		assert(g_call_count == normal_count + WARNING_Ref);
 		clear_sigal_state();
 	}
 
 	{
-
 		// test scope weak
+		{
+			ctest b1,c1;
+			g_sig.connect(&ctest::f1, &b1, std::placeholders::_1); ++normal_count;
+			g_sig.connect(&ctest::f1, std::ref(b1), std::placeholders::_1); ++normal_count;
+#if TEST_CLONE_BIND
+			if (test_warning) {
+				g_sig.connect(&ctest::f1, c1, std::placeholders::_1); ++normal_count;
+				WARNING_Ref += 1;
+			}
+#endif
+			g_sig(203);
+		}
+		g_sig(204);
+
+		assert(g_call_count == normal_count + WARNING_Ref);
+		clear_sigal_state();
+	}
+	{
+		// test scope weak2
 		{
 			ctest a1;
 			{
